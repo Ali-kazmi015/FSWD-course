@@ -1,0 +1,78 @@
+body {
+    margin: 0;
+    font-family: Arial;
+    background-color: #f0f2f5;
+}
+
+nav {
+    background-color: white;
+    padding: 10px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    border-bottom: 1px solid gray;
+}
+
+nav h2 {
+    color: #1877f2;
+}
+
+nav input {
+    padding: 10px;
+    border-radius: 20px;
+    border: 1px solid gray;
+}
+
+.icons {
+    margin-left: auto;
+}
+
+.icons span {
+    font-size: 25px;
+    margin: 10px;
+}
+
+.container {
+    display: flex;
+    gap: 20px;
+    padding: 20px;
+}
+
+aside {
+    width: 20%;
+}
+
+main {
+    width: 55%;
+}
+
+.right {
+    width: 20%;
+}
+
+.post-box, .post {
+    background-color: white;
+    padding: 20px;
+    margin-bottom: 20px;
+    border-radius: 8px;
+}
+
+.post-box input {
+    width: 90%;
+    padding: 12px;
+    border: 1px solid gray;
+    border-radius: 20px;
+}
+
+button {
+    margin-top: 10px;
+    padding: 8px 20px;
+    background-color: #1877f2;
+    color: white;
+    border: none;
+    border-radius: 5px;
+}
+
+p {
+    font-size: 15px;
+}

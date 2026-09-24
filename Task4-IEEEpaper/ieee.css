@@ -1,0 +1,45 @@
+body {
+    background-color: #ddd;
+    font-family: "Times New Roman";
+    margin: 0;
+}
+
+.paper {
+    width: 800px;
+    margin: 30px auto;
+    background-color: white;
+    padding: 50px;
+}
+
+h1 {
+    text-align: center;
+    font-size: 24px;
+}
+
+.authors {
+    text-align: center;
+}
+
+.university {
+    text-align: center;
+    font-size: 14px;
+}
+
+h2 {
+    font-size: 16px;
+}
+
+p {
+    font-size: 14px;
+    line-height: 1.4;
+    text-align: justify;
+}
+
+.columns {
+    display: flex;
+    gap: 25px;
+}
+
+.column {
+    width: 50%;
+}

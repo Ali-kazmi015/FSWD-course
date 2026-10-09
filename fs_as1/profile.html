@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ConnecFriend - Profile</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <div id="navbar"></div>
+
+  <div class="container">
+    <div class="card">
+      <div class="profile-top">
+        <img id="profilePic" class="profile-pic" alt="Profile picture">
+        <div>
+          <h2 id="profileName"></h2>
+          <p id="profileBio"></p>
+          <p id="profileEmail"></p>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Friends</h3>
+      <div id="friendsList"></div>
+    </div>
+  </div>
+
+  <script src="data.js"></script>
+  <script src="auth.js"></script>
+  <script src="navbar.js"></script>
+  <script>
+    requireLogin();
+    renderNavbar();
+
+    const me = currentUser();
+
+    document.getElementById("profilePic").src = me.photo;
+    document.getElementById("profileName").textContent = me.name;
+    document.getElementById("profileBio").textContent = me.bio;
+    document.getElementById("profileEmail").textContent = "Email: " + me.email;
+
+    const friendsList = document.getElementById("friendsList");
+
+    if (me.friends.length === 0) {
+      friendsList.textContent = "You have no friends yet.";
+    }
+
+    me.friends.forEach(function (friendId) {
+      const friend = getUserById(friendId);
+      friendsList.innerHTML += `
+        <div class="friend-item">
+          <img class="friend-pic" src="${friend.photo}" alt="">
+          <span>${friend.name}</span>
+        </div>
+      `;
+    });
+  </script>
+</body>
+</html>

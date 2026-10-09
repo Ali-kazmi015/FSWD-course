@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ConnecFriend - Messages</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .chat-layout { display: flex; gap: 20px; align-items: flex-start; }
+    .chat-users { flex: 1; }
+    .chat-box { flex: 2; }
+    .user-row { display: flex; align-items: center; gap: 12px; padding: 10px; border-radius: 8px; cursor: pointer; }
+    .user-row:hover { background: #f0f2f5; }
+    .user-row.selected { background: #e7f0fd; }
+    .badge { background: #d93025; color: white; border-radius: 12px; padding: 2px 8px; font-size: 12px; margin-left: auto; }
+    #chatMessages { height: 350px; overflow-y: auto; background: #f0f2f5; border-radius: 8px; padding: 12px; margin: 12px 0; }
+    .bubble { max-width: 70%; padding: 8px 12px; border-radius: 14px; margin-bottom: 8px; word-wrap: break-word; clear: both; }
+    .bubble.sent { background: #1877f2; color: white; margin-left: auto; }
+    .bubble.received { background: white; color: #1c1e21; margin-right: auto; }
+    .chat-input { display: flex; gap: 10px; }
+    @media (max-width: 700px) {
+      .chat-layout { flex-direction: column; }
+      .chat-users, .chat-box { flex: none; width: 100%; }
+    }
+  </style>
+</head>
+<body>
+
+  <div id="navbar"></div>
+
+  <div class="container chat-layout">
+    <div class="card chat-users">
+      <h3>Members</h3>
+      <div id="userList"></div>
+    </div>
+
+    <div class="card chat-box">
+      <h3 id="chatHeader">Select someone to start chatting</h3>
+      <div id="chatMessages"></div>
+      <p id="chatError" class="error"></p>
+      <div class="chat-input">
+        <input type="text" id="messageInput" placeholder="Type a message..." disabled>
+        <button id="sendBtn" disabled>Send</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="data.js"></script>
+  <script src="auth.js"></script>
+  <script src="navbar.js"></script>
+  <script>
+    requireLogin();
+    renderNavbar();
+
+    const me = currentUser();
+    let selectedId = null;
+
+    // ----- data helpers -----
+    function getConversation(otherId) {
+      return load("messages", [])
+        .filter(m => (m.from === me.id && m.to === otherId) ||
+                     (m.from === otherId && m.to === me.id))
+        .sort((a, b) => a.time - b.time);
+    }
+
+    function sendMessage(toId, text) {
+      const messages = load("messages", []);
+      messages.push({ id: Date.now(), from: me.id, to: toId, text: text, time: Date.now(), read: false });
+      save("messages", messages);
+    }
+
+    function markAsRead(otherId) {
+      const messages = load("messages", []);
+      messages.forEach(function (m) {
+        if (m.from === otherId && m.to === me.id) m.read = true;
+      });
+      save("messages", messages);
+    }
+
+    function unreadCount(otherId) {
+      return load("messages", []).filter(m => m.from === otherId && m.to === me.id && !m.read).length;
+    }
+
+    // ----- left side: members -----
+    function renderUsers() {
+      const userList = document.getElementById("userList");
+      userList.innerHTML = "";
+
+      load("users", []).filter(u => u.id !== me.id).forEach(function (user) {
+        const unread = unreadCount(user.id);
+        const tag = me.friends.includes(user.id) ? "Friend" : "Member";
+
+        const row = document.createElement("div");
+        row.className = "user-row" + (user.id === selectedId ? " selected" : "");
+        row.innerHTML =
+          '<img class="friend-pic" src="' + user.photo + '" alt="">' +
+          '<div><strong>' + user.name + '</strong><br><span class="small-text">' + tag + '</span></div>' +
+          (unread > 0 ? '<span class="badge">' + unread + '</span>' : '');
+        row.onclick = function () { openChat(user.id); };
+        userList.appendChild(row);
+      });
+    }
+
+    // ----- right side: conversation -----
+    function renderChat() {
+      const box = document.getElementById("chatMessages");
+      box.innerHTML = "";
+
+      const chat = getConversation(selectedId);
+      if (chat.length === 0) {
+        box.textContent = "No messages yet. Say hello!";
+        return;
+      }
+
+      chat.forEach(function (m) {
+        const bubble = document.createElement("div");
+        bubble.className = "bubble " + (m.from === me.id ? "sent" : "received");
+        bubble.textContent = m.text;
+        box.appendChild(bubble);
+      });
+
+      box.scrollTop = box.scrollHeight;
+    }
+
+    function openChat(userId) {
+      selectedId = userId;
+      markAsRead(userId);
+      document.getElementById("chatHeader").textContent = "Chat with " + getUserById(userId).name;
+      document.getElementById("messageInput").disabled = false;
+      document.getElementById("sendBtn").disabled = false;
+      document.getElementById("chatError").textContent = "";
+      renderUsers();
+      renderChat();
+    }
+
+    function handleSend() {
+      const input = document.getElementById("messageInput");
+      const error = document.getElementById("chatError");
+      const text = input.value.trim();
+
+      if (selectedId === null) { error.textContent = "Select someone to message first."; return; }
+      if (text === "") { error.textContent = "You can't send an empty message."; return; }
+
+      sendMessage(selectedId, text);
+      input.value = "";
+      error.textContent = "";
+      renderChat();
+    }
+
+    document.getElementById("sendBtn").addEventListener("click", handleSend);
+    document.getElementById("messageInput").addEventListener("keydown", function (e) {
+      if (e.key === "Enter") handleSend();
+    });
+
+    renderUsers();
+  </script>
+</body>
+</html>

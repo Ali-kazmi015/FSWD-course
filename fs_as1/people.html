@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ConnecFriend - People</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <div id="navbar"></div>
+
+  <div class="container">
+    <p id="msg"></p>
+
+    <div class="card">
+      <h3>Friend Requests</h3>
+      <div id="requestsList"></div>
+    </div>
+
+    <div class="card">
+      <h3>Your Friends</h3>
+      <p class="small-text">Rate: 🤪 Stupid &nbsp; 😎 Cool &nbsp; 🤝 Trustworthy</p>
+      <div id="myFriends"></div>
+    </div>
+
+    <div class="card">
+      <h3>Find People</h3>
+      <div id="otherPeople"></div>
+    </div>
+  </div>
+
+  <script src="data.js"></script>
+  <script src="auth.js"></script>
+  <script src="navbar.js"></script>
+  <script src="friends.js"></script>
+  <script>
+    requireLogin();
+    renderNavbar();
+
+    const icons = { 1: "🤪", 2: "😎", 3: "🤝" };
+    const labels = { 1: "Stupid", 2: "Cool", 3: "Trustworthy" };
+
+    function showMessage(text, isError) {
+      const box = document.getElementById("msg");
+      box.textContent = text;
+      box.className = isError ? "error" : "success";
+    }
+
+    function renderPage() {
+      const me = currentUser();
+
+      // ----- 1. Incoming friend requests -----
+      const requestsList = document.getElementById("requestsList");
+      requestsList.innerHTML = "";
+      const incoming = getIncomingRequests();
+
+      if (incoming.length === 0) {
+        requestsList.textContent = "No pending requests.";
+      }
+      incoming.forEach(function (req) {
+        const sender = getUserById(req.from);
+        requestsList.innerHTML += `
+          <div class="person-row">
+            <div class="person-info">
+              <img class="friend-pic" src="${sender.photo}" alt="">
+              <strong>${sender.name}</strong>
+            </div>
+            <div>
+              <button onclick="acceptReq(${sender.id})">Accept</button>
+              <button class="react-btn" onclick="declineReq(${sender.id})">Decline</button>
+            </div>
+          </div>
+        `;
+      });
+
+      // ----- 2. My friends with rating icons -----
+      const myFriends = document.getElementById("myFriends");
+      myFriends.innerHTML = "";
+
+      if (me.friends.length === 0) {
+        myFriends.textContent = "You have no friends yet.";
+      }
+      me.friends.forEach(function (friendId) {
+        const friend = getUserById(friendId);
+        const rating = me.ratings[friendId];
+
+        const buttons = [1, 2, 3].map(function (n) {
+          return `<button class="react-btn ${rating === n ? "active-like" : ""}"
+                          title="${labels[n]}"
+                          onclick="rate(${friend.id}, ${n})">${icons[n]}</button>`;
+        }).join("");
+
+        myFriends.innerHTML += `
+          <div class="person-row">
+            <div class="person-info">
+              <img class="friend-pic" src="${friend.photo}" alt="">
+              <div>
+                <strong>${friend.name}</strong><br>
+                <span class="small-text">${rating ? "Rated: " + labels[rating] : "Not rated yet"}</span>
+              </div>
+            </div>
+            <div class="rating-btns">${buttons}</div>
+          </div>
+        `;
+      });
+
+      // ----- 3. Everyone else -----
+      const otherPeople = document.getElementById("otherPeople");
+      otherPeople.innerHTML = "";
+
+      const others = load("users", []).filter(function (u) {
+        return u.id !== me.id && !me.friends.includes(u.id);
+      });
+
+      if (others.length === 0) {
+        otherPeople.textContent = "No one else to add.";
+      }
+      others.forEach(function (user) {
+        const action = hasPendingRequest(me.id, user.id)
+          ? `<span class="small-text">Request sent</span>`
+          : `<button onclick="addFriend(${user.id})">Add Friend</button>`;
+
+        otherPeople.innerHTML += `
+          <div class="person-row">
+            <div class="person-info">
+              <img class="friend-pic" src="${user.photo}" alt="">
+              <strong>${user.name}</strong>
+            </div>
+            ${action}
+          </div>
+        `;
+      });
+    }
+
+    function addFriend(id) {
+      const result = sendFriendRequest(id);
+      showMessage(result.message, !result.ok);
+      renderPage();
+    }
+
+    function acceptReq(id) {
+      acceptRequest(id);
+      showMessage("Friend request accepted.", false);
+      renderPage();
+    }
+
+    function declineReq(id) {
+      declineRequest(id);
+      showMessage("Friend request declined.", false);
+      renderPage();
+    }
+
+    function rate(friendId, rating) {
+      rateFriend(friendId, rating);
+      renderPage();
+    }
+
+    renderPage();
+  </script>
+</body>
+</html>

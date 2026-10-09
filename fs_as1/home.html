@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ConnecFriend - Home</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <div id="navbar"></div>
+
+  <div class="container home-layout">
+
+    <div class="feed-column">
+
+      <div class="card">
+        <h3>Share news</h3>
+        <textarea id="postText" rows="3" placeholder="What's on your mind?"></textarea>
+        <input type="file" id="postImage" accept="image/*">
+
+        <div class="share-options">
+          <label><input type="radio" name="shareWith" value="all" checked> All friends</label>
+          <label><input type="radio" name="shareWith" value="some"> Selected friends</label>
+        </div>
+
+        <div id="friendChecks"></div>
+
+        <p id="postError" class="error"></p>
+        <button id="postBtn">Post</button>
+      </div>
+
+      <h3 class="section-title">News Feed</h3>
+      <div id="feedList"></div>
+    </div>
+
+    <div class="side-column">
+      <div class="card">
+        <h3>Friends</h3>
+        <p class="small-text">Latest login first</p>
+        <div id="friendsList"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="data.js"></script>
+  <script src="auth.js"></script>
+  <script src="navbar.js"></script>
+  <script src="feed.js"></script>
+  <script>
+    requireLogin();
+    renderNavbar();
+
+    const me = currentUser();
+    const friends = getFriendsByLogin();
+
+    // ---------- Friends list ----------
+    const friendsList = document.getElementById("friendsList");
+    if (friends.length === 0) {
+      friendsList.textContent = "No friends yet.";
+    }
+    friends.forEach(function (friend) {
+      friendsList.innerHTML += `
+        <div class="friend-item">
+          <img class="friend-pic" src="${friend.photo}" alt="">
+          <div>
+            <strong>${friend.name}</strong><br>
+            <span class="small-text">${timeAgo(friend.lastLogin)}</span>
+          </div>
+        </div>
+      `;
+    });
+
+    // ---------- Checkboxes for "Selected friends" ----------
+    const friendChecks = document.getElementById("friendChecks");
+    friends.forEach(function (friend) {
+      friendChecks.innerHTML += `
+        <label class="check-item">
+          <input type="checkbox" value="${friend.id}"> ${friend.name}
+        </label>
+      `;
+    });
+
+    document.querySelectorAll('input[name="shareWith"]').forEach(function (radio) {
+      radio.addEventListener("change", function () {
+        friendChecks.style.display = radio.value === "some" ? "block" : "none";
+      });
+    });
+
+    // ---------- Post button ----------
+    document.getElementById("postBtn").addEventListener("click", function () {
+      const postError = document.getElementById("postError");
+      const textBox = document.getElementById("postText");
+      const fileInput = document.getElementById("postImage");
+      const text = textBox.value.trim();
+      const shareWith = document.querySelector('input[name="shareWith"]:checked').value;
+      const file = fileInput.files[0];
+
+      if (text === "") {
+        postError.textContent = "Please write something to share.";
+        return;
+      }
+
+      let visibleTo = [];
+      if (shareWith === "all") {
+        visibleTo = me.friends.slice();
+      } else {
+        document.querySelectorAll('#friendChecks input:checked').forEach(function (box) {
+          visibleTo.push(Number(box.value));
+        });
+      }
+
+      if (visibleTo.length === 0) {
+        postError.textContent = "Choose at least one friend to share with.";
+        return;
+      }
+
+      if (file && file.size > 500 * 1024) {
+        postError.textContent = "Image is too large. Please choose one under 500 KB.";
+        return;
+      }
+
+      function finish(imageData) {
+        createPost(text, visibleTo, imageData);
+        textBox.value = "";
+        fileInput.value = "";
+        postError.textContent = "";
+        renderFeed();
+      }
+
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function () { finish(reader.result); };
+        reader.readAsDataURL(file);
+      } else {
+        finish(null);
+      }
+    });
+
+    // ---------- Like / dislike ----------
+    function handleLike(postId) {
+      likePost(postId);
+      renderFeed();
+    }
+
+    function handleDislike(postId) {
+      dislikePost(postId);
+      renderFeed();
+    }
+
+    // ---------- News feed ----------
+    function renderFeed() {
+      const feedList = document.getElementById("feedList");
+      const posts = getFeed();
+      feedList.innerHTML = "";
+
+      if (posts.length === 0) {
+        feedList.innerHTML = `<div class="card">No posts to show yet.</div>`;
+      }
+
+      posts.forEach(function (post) {
+        const author = getUserById(post.authorId);
+        const iLiked = post.likes.includes(me.id);
+        const iDisliked = post.dislikes.includes(me.id);
+
+        feedList.innerHTML += `
+          <div class="card post">
+            <div class="post-header">
+              <img class="friend-pic" src="${author.photo}" alt="">
+              <div>
+                <strong>${author.name}</strong><br>
+                <span class="small-text">Last login: ${timeAgo(author.lastLogin)}</span>
+              </div>
+            </div>
+            <p class="post-text">${escapeHtml(post.text)}</p>
+            ${post.image ? `<img class="post-image" src="${post.image}" alt="Post image">` : ""}
+            <span class="small-text">Posted ${timeAgo(post.time)}</span>
+            <div class="post-actions">
+              <button class="react-btn ${iLiked ? "active-like" : ""}"
+                      onclick="handleLike(${post.id})">👍 Like (${post.likes.length})</button>
+              <button class="react-btn ${iDisliked ? "active-dislike" : ""}"
+                      onclick="handleDislike(${post.id})">👎 Dislike (${post.dislikes.length})</button>
+            </div>
+          </div>
+        `;
+      });
+    }
+
+    renderFeed();
+  </script>
+</body>
+</html>
